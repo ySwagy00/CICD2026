@@ -39,23 +39,41 @@ Avant de commencer, tu dois avoir :
 
 ---
 
-## 3. Récupérer le projet de départ
+## 3. Mise en place et récupéreration du projet de départ
 
-### 3.1. Fork du dépôt
+### 3.1. Installer la fonctionnalité git, node.js et créer un répertoire pour le projet sur kube-worker1 dans le répertoire projet.
+   ````
+   sudo apt install git
+   sudo apt install npm
+   cd /home/etudiant/Documents/project
+   code
+   ````
 
-1. Va sur le dépôt GitHub du labo (fourni par ton enseignant).
-2. Clique sur **Fork** (en haut à droite).
-3. Choisis ton compte GitHub comme destination.
+### 3.2. Dans VS Code,
+   - Aller vous positionner dans projet (Ctrl-K ctrl-O)
+   - Faire menu view et terminal pour afficher un terminal
+   - Dans le terminal positionnz-vous dans /home/etudiant/Documents/project/ (cd /home/etudiant/Documents/project/)
 
+### 3.3. Fork du dépôt
+
+1. Sur ce repo Git, clique sur **Fork** (en haut à droite).
+   
+   
+  <img width="807" height="126" alt="image" src="https://github.com/user-attachments/assets/6a75eefe-3e00-456b-83f6-4996d646d911" />
+<br><br>
+2. Choisis ton compte GitHub comme destination.
+<br><br>
+<img width="807" height="608" alt="image" src="https://github.com/user-attachments/assets/e2039f23-3744-4138-a09e-d5362708b140" />
+<br><br>
 Tu as maintenant ton propre dépôt avec le code du labo.
 
 ### 3.2. Cloner ton fork sur la VM
 
-Sur la VM (dans VS Code ou terminal) :
+Sur la VM (dans VS Code ou terminal) tu vas téléchager de ton git le projet en local sur la vm dans le répertoire project.
 
 ```bash
-git clone https://github.com/<TON_USERNAME>/<NOM_DU_DEPOT>.git
-cd <NOM_DU_DEPOT>
+git clone https://github.com/<TON_USERNAME>/cicd2026.git
+cd cicd2026
 ```
 
 ---
@@ -96,7 +114,7 @@ npm install
 npm start
 ```
 
-Puis, dans le navigateur de la VM :  
+Puis, dans le navigateur de la VM, test cette url.
 `http://localhost:3000`
 
 ---
@@ -105,7 +123,7 @@ Puis, dans le navigateur de la VM :
 
 ### 6.1. Vérifier le Dockerfile
 
-Ouvre le fichier `Dockerfile` à la racine du projet. Il devrait ressembler à ceci :
+Ouvre le fichier `Dockerfile` à la racine du projet. Il devrait ressembler à ceci avec des commentaires pour votre compréhension:
 
 ```Dockerfile
 FROM node:18-alpine
@@ -155,6 +173,16 @@ spec:
           image: DOCKER_HUB_USERNAME/hello-app:dev
           ports:
             - containerPort: 3000
+          env:
+            - name: APP_ENV
+              value: dev
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -170,6 +198,28 @@ spec:
       targetPort: 3000
       protocol: TCP
   type: ClusterIP
+---
+apiVersion: v1
+kind: Ingress
+metadata:
+  name: hello-app-dev
+  namespace: dev
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+# ajouter dans le /etc/host
+# 192.168.21.100  hello.cluster.local
+    - host: hello.cluster.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-app-dev
+                port:
+                  number: 80
 ```
 
 > **Important :**  
@@ -177,7 +227,7 @@ spec:
 
 ### 7.2. Fichiers `k8s/deployment-qa.yaml` et `k8s/deployment-prod.yaml`
 
-Ils sont similaires, mais avec :
+Vous devez les faire et ils devraient être similaires, mais avec :
 
 - `namespace: qa` et tag `:qa` pour `deployment-qa.yaml`
 - `namespace: prod` et tag `:prod` pour `deployment-prod.yaml`
@@ -193,7 +243,7 @@ Les secrets permettent de stocker des informations sensibles (mots de passe, tok
 1. Connecte-toi à **Docker Hub**.
 2. Va dans **Account Settings → Security**.
 3. Crée un **Access Token**.
-4. Copie ce token (tu ne pourras plus le revoir après).
+4. Copie ce token pour l'utiliser plus tard (tu ne pourras plus le revoir après, donc copie le dans un fichier txt).
 
 ### 8.2. Ajouter les secrets dans ton dépôt GitHub
 
@@ -220,7 +270,7 @@ Le workflow GitHub Actions est un fichier YAML qui décrit les étapes du pipeli
 
 ### 9.1. Fichier `.github/workflows/ci-cd.yaml`
 
-Ouvre (ou crée) le fichier :
+Ouvre le fichier, il y a des commentaires pour t'aider à le comprendre :
 
 ```yaml
 name: CI/CD k3s + Docker Hub
@@ -319,9 +369,9 @@ jobs:
 2. Repère le texte `"hello world"`.
 3. Modifie-le, par exemple :
 
-- Pour la branche `dev` : `"Hello from DEV environment"`
-- Pour la branche `qa` : `"Hello from QA environment"`
-- Pour la branche `main` : `"Hello from PROD environment"`
+- Pour la branche `dev` : `"Hello de l'environnement de DEV"`
+- Pour la branche `qa` : `"Hello de l'environnement de QA"`
+- Pour la branche `main` : `Hello de l'environnement de PROD"`
 
 > Tu peux commencer par `dev`, puis refaire plus tard pour `qa` et `main`.
 
@@ -332,7 +382,7 @@ Dans le terminal, à la racine du projet :
 ```bash
 git checkout dev
 git add .
-git commit -m "Change message for dev"
+git commit -m "Changer le message pour dev"
 git push origin dev
 ```
 
@@ -391,23 +441,7 @@ kubectl port-forward svc/hello-app-qa -n qa 8081:80
 
 ---
 
-## 11. Résultat attendu
-
-À la fin du labo, tu dois être capable de :
-
-- Expliquer le lien entre :
-  - branche Git (`dev`, `qa`, `main`),
-  - tag d’image Docker (`:dev`, `:qa`, `:prod`),
-  - namespace k3s (`dev`, `qa`, `prod`).
-- Montrer que :
-  - un push sur `dev` déploie dans `dev`,
-  - un push sur `qa` déploie dans `qa`,
-  - un push sur `main` déploie dans `prod`.
-- Lire et comprendre les grandes lignes du fichier `ci-cd.yaml`.
-
----
-
-## 12. Pour aller plus loin (optionnel)
+## 11. Pour aller plus loin (optionnel)
 
 Si tu as terminé en avance, tu peux :
 
@@ -417,11 +451,10 @@ Si tu as terminé en avance, tu peux :
 
 ---
 
-## 13. Checklist de fin de labo
+## 12. Checklist de fin de labo
 
 - [ ] Les secrets GitHub sont configurés.
 - [ ] Le workflow GitHub Actions s’exécute sans erreur pour `dev`.
 - [ ] L’application est accessible dans le namespace `dev`.
 - [ ] Le pipeline fonctionne aussi pour `qa` et `prod`.
 - [ ] Tu comprends le rôle de chaque étape du pipeline.
-
