@@ -128,4 +128,4 @@ jobs:
       # ------------------------------------------------------------
       - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f k8s/deployment-${{ steps.vars.outputs.K8S_ENV }}.yaml
+          kubectl apply -f k8s/deployment.yaml -n ${{ steps.vars.outputs.K8S_ENV }}
