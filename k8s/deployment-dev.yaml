@@ -57,7 +57,7 @@ spec:
   rules:
 # ajouter dans le /etc/host
 # 192.168.21.100  hello.cluster.local
-    - host: hello.cluster.local
+    - host: hello.dev.cluster.local
       http:
         paths:
           - path: /
