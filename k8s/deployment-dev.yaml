@@ -18,6 +18,7 @@ spec:
       containers:
         - name: hello-app
           image: DOCKER_HUB_USERNAME/hello-app:dev
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
