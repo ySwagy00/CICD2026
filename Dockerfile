@@ -58,3 +58,4 @@ EXPOSE 3000
 # On lance l'application Node.js.
 # Le chemin "app/server.js" correspond à ce qu’on a copié plus haut.
 CMD ["node", "app/server.js"]
+ 
